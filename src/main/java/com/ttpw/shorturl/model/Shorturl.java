@@ -23,7 +23,9 @@ public class Shorturl {
     @Id
     private Long id;
     private String shortCode;
-    private String url;
+    private String md5Key;
+    private Integer accessCounts;
     private LocalDateTime createrTime;
+    private String url;
 }
 

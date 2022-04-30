@@ -72,7 +72,11 @@ public class TestTBDS {
     }
     @Test
     public void testSave(){
-        boolean insert = shorturlService.insert();
-        System.out.println(insert);
+
+    }
+    @Test
+    public void testKey(){
+        String getkey = shorturlService.getkey();
+        System.out.println(getkey);
     }
 }

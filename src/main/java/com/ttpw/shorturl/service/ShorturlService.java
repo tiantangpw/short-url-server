@@ -1,33 +1,166 @@
 package com.ttpw.shorturl.service;
 
 import cn.hutool.core.lang.generator.SnowflakeGenerator;
+import cn.hutool.crypto.digest.MD5;
+import com.ttpw.shorturl.model.ConstantValue;
 import com.ttpw.shorturl.model.Shorturl;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
+import java.util.regex.Pattern;
 
 /**
  * @Author willlee
  * @Date 2022/4/30 11:52
  **/
+@Slf4j
 @Service
 public class ShorturlService {
     @Autowired
     private MongoTemplate mongoTemplate;
     @Autowired
     private SnowflakeGenerator idGenerator;
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;
+    @Autowired
+    private RestTemplate restTemplate;
+    @Autowired
+    private ShortCodeService shortCodeService;
 
+    public String getkey(){
+        Object hello = stringRedisTemplate.opsForValue().get("hello");
 
-    public boolean insert(){
-        Shorturl url=new Shorturl();
-        url.setId(idGenerator.next());
-        url.setShortCode("sdfrew");
-        url.setUrl("http://www.baidu.com");
-        url.setCreaterTime(LocalDateTime.now());
-        Shorturl shorturl = mongoTemplate.insert(url);
-        System.out.println(shorturl.toString());
-        return shorturl==null?false:true;
+        return hello.toString();
     }
+
+    /**
+     * 构建短链
+     * @param url
+     * @return
+     */
+    public String buildShortUrl(String url){
+        return ConstantValue.short_url_prefix+fetchShortCode(url);
+    }
+
+    /**
+     * 获取短码
+     * @param url
+     * @return
+     */
+    public String fetchShortCode(String url){
+
+        if(!url.startsWith(ConstantValue.HTTP)  ){
+         url+=ConstantValue.HTTP+"://";
+        }
+        if(!testURL(url)  ){
+          throw new RuntimeException(url+",不符合URL规范!");
+        }
+        if(!accessUrl(url)  ){
+            throw new RuntimeException(url+",访问异常,请确保该链接可以被访问到!");
+        }
+        String md5Key = MD5.create().digestHex(url);
+
+        Shorturl shortUrl = shortCodeService.existMd5Key(md5Key);
+        if(Objects.nonNull(shortUrl)){
+          return shortUrl.getShortCode();
+        }
+        String shortcode = shortCodeService.getShortCode();
+
+        shortCodeService.saveShortCode(shortcode,url,md5Key);
+
+        return shortcode;
+    }
+
+    /**
+     * 测试url是否可以访问
+     * @param url
+     * @return
+     */
+    public boolean accessUrl(String url){
+        try {
+
+            ResponseEntity<String> forEntity = restTemplate.getForEntity(url, String.class);
+            HttpStatus statusCode = forEntity.getStatusCode();
+            log.info(url+"=="+statusCode.toString());
+            if(statusCode.is2xxSuccessful()
+                    ||statusCode.is1xxInformational()
+                    ||statusCode.is3xxRedirection()
+                    ||statusCode.is5xxServerError()
+
+            ){
+              return true;
+            }else if(statusCode.is4xxClientError()||statusCode.isError()  ){
+              return false;
+            }
+        }catch (HttpClientErrorException clientEx){//40x 客户端异常
+            return false;
+        }catch (HttpServerErrorException serverEx){//50x 服务端异常
+            return true;
+
+        }catch (ResourceAccessException accessEx){// 无法访问
+            return false;
+        }catch (Exception e) {
+            log.error(url+",访问异常!",e.getMessage());
+            return false;
+
+        }
+        return false;
+    }
+
+    /**
+     * 校验url格式
+     * @param url
+     * @return
+     */
+    private static boolean testURL(String url){
+        String regex="(http|https)://[-A-Za-z0-9+&@#/%?=~_|!:,.;]+[-A-Za-z0-9+&@#/%=~_|]";
+        return Pattern.matches(regex,url);
+
+    }
+
+    /**
+     * 用短码找URL
+     * @param code
+     * @return
+     */
+    public String changeShortCode(String code){
+        String errorMsg=code+",不合法!";
+        if(code.length()!=6  ){
+          throw new RuntimeException(errorMsg);
+        }
+        String urlFromRedis = shortCodeService.getUrlFromRedis(code);
+        if(ConstantValue.none.equals(urlFromRedis)  ){
+            throw new RuntimeException(errorMsg);
+        }
+
+        if(urlFromRedis!=null&&urlFromRedis.startsWith(ConstantValue.HTTP)  ){
+            return urlFromRedis;
+        }
+        if(urlFromRedis==null  ){
+            String urlFromMongo = shortCodeService.getUrlFromMongo(code);
+            if(Objects.nonNull(urlFromMongo)  ){
+
+                shortCodeService.cachedShortCode(code,urlFromMongo);
+                return urlFromMongo;
+            }else{
+                shortCodeService.cachedShortCode(code,ConstantValue.none);
+                throw new RuntimeException(errorMsg);
+            }
+        }
+        throw new RuntimeException(errorMsg);
+    }
+
 }
