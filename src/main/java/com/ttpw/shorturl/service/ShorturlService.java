@@ -13,6 +13,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResourceAccessException;
@@ -52,6 +53,9 @@ public class ShorturlService {
      * @return
      */
     public String buildShortUrl(String url){
+        if(!StringUtils.hasText(url)||url.length()>500){
+          throw new RuntimeException("url长度不对!");
+        }
         return ConstantValue.short_url_prefix+fetchShortCode(url);
     }
 
