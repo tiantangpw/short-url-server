@@ -74,9 +74,5 @@ public class TestTBDS {
     public void testSave(){
 
     }
-    @Test
-    public void testKey(){
-        String getkey = shorturlService.getkey();
-        System.out.println(getkey);
-    }
+
 }

@@ -1,15 +1,11 @@
 package com.ttpw.shorturl.service;
 
-import cn.hutool.core.lang.generator.SnowflakeGenerator;
 import cn.hutool.crypto.digest.MD5;
+import com.ttpw.shorturl.aop.Log;
 import com.ttpw.shorturl.model.ConstantValue;
 import com.ttpw.shorturl.model.Shorturl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -19,7 +15,6 @@ import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
-import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
@@ -30,28 +25,19 @@ import java.util.regex.Pattern;
 @Slf4j
 @Service
 public class ShorturlService {
-    @Autowired
-    private MongoTemplate mongoTemplate;
-    @Autowired
-    private SnowflakeGenerator idGenerator;
-    @Autowired
-    private StringRedisTemplate stringRedisTemplate;
+
     @Autowired
     private RestTemplate restTemplate;
     @Autowired
     private ShortCodeService shortCodeService;
 
-    public String getkey(){
-        Object hello = stringRedisTemplate.opsForValue().get("hello");
-
-        return hello.toString();
-    }
 
     /**
      * 构建短链
      * @param url
      * @return
      */
+    @Log
     public String buildShortUrl(String url){
         if(!StringUtils.hasText(url)||url.length()>500){
           throw new RuntimeException("url长度不对!");
@@ -140,6 +126,7 @@ public class ShorturlService {
      * @param code
      * @return
      */
+    @Log
     public String changeShortCode(String code){
         String errorMsg=code+",不合法!";
         if(code.length()!=6  ){
