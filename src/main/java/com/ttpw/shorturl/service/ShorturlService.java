@@ -2,6 +2,8 @@ package com.ttpw.shorturl.service;
 
 import cn.hutool.crypto.digest.MD5;
 import com.ttpw.shorturl.aop.Log;
+import com.ttpw.shorturl.exception.JsonException;
+import com.ttpw.shorturl.exception.Status;
 import com.ttpw.shorturl.model.ConstantValue;
 import com.ttpw.shorturl.model.Shorturl;
 import lombok.extern.slf4j.Slf4j;
@@ -67,11 +69,20 @@ public class ShorturlService {
         if(Objects.nonNull(shortUrl)){
           return shortUrl.getShortCode();
         }
-        String shortcode = shortCodeService.getShortCode();
 
-        shortCodeService.saveShortCode(shortcode,url,md5Key);
+        for (int i = 0; i < 5; i++) {//短码有重复使用的可能,尝试5次
+            String shortcode = shortCodeService.getShortCode();
+            if(Objects.isNull(shortcode)  ){
+              break;//当前Redis中没有短码
+            }
+            String urlFromMongo = shortCodeService.getUrlFromMongo(shortcode);
+            if(Objects.isNull(urlFromMongo)  ){//判断MongoDB中是否已经存在shortcode
+                shortCodeService.saveShortCode(shortcode,url,md5Key);
+                return shortcode;
+            }
+        }
 
-        return shortcode;
+        throw new JsonException(Status.SERVER_BUSY);
     }
 
     /**
@@ -122,7 +133,7 @@ public class ShorturlService {
     }
 
     /**
-     * 用短码找URL
+     * 用短码找URL, 已在NGINX中实现
      * @param code
      * @return
      */

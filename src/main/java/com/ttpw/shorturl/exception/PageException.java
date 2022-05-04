@@ -1,8 +1,5 @@
 package com.ttpw.shorturl.exception;
 
-import lombok.Getter;
-
-@Getter
 public class PageException extends BaseException {
 
     public PageException(Status status) {

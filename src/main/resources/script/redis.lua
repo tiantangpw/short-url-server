@@ -21,7 +21,7 @@ if not ok then
 
 end
 
-local request_uri = string.sub(ngx.var.request_uri,2)
+local request_uri ="shortcode_"..string.sub(ngx.var.request_uri,2)
 temp1 = 0
 temp1  =  red:exists(request_uri)
 

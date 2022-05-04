@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -41,7 +42,7 @@ public class ShortCodeService {
         shortUrl.setMd5Key(md5Key);
         shortUrl.setCreaterTime(LocalDateTime.now());
         shortUrl.setUrl(url);
-        shortUrl.setShortCode(shortcode);
+        shortUrl.setShortCode(ConstantValue.redis_shortcode_prefix+shortcode);
         mongoTemplate.insert(shortUrl);
         cachedShortCode(shortcode, url);
         return true;
@@ -54,6 +55,12 @@ public class ShortCodeService {
     public String getShortCode(){
         return stringRedisTemplate.opsForSet().pop(ConstantValue.remainder_shortcode);
     }
+
+    /**
+     *  缓存短码-URL映射到Redis中
+     * @param shortcode
+     * @param url
+     */
     public void cachedShortCode(String shortcode,String url){
         stringRedisTemplate.opsForValue().set(ConstantValue.redis_shortcode_prefix+shortcode,url,30, TimeUnit.DAYS);
     }
@@ -62,11 +69,31 @@ public class ShortCodeService {
     }
 
     public String getUrlFromMongo(String code){
-        Shorturl shorturl=mongoTemplate.findOne(new Query(Criteria.where(ConstantValue.short_code).is(code)), Shorturl.class);
+        Shorturl shorturl=mongoTemplate.findOne(new Query(Criteria.where(ConstantValue.short_code).is(ConstantValue.redis_shortcode_prefix+code)), Shorturl.class);
         if(Objects.nonNull(shorturl)){
           return shorturl.getUrl();
         }
 
         return null;
+    }
+
+    /**
+     * Redis中剩余的短码
+     * @return
+     */
+    public Long remainderShortcode(){
+        Long size = stringRedisTemplate.opsForSet().size(ConstantValue.remainder_shortcode);
+        return size==null?0:size;
+    }
+
+    /**
+     * 批量添加短码到Redis中
+     * @param codes
+     * @return
+     */
+    public boolean batchSaveCode(Set<String> codes){
+
+        Long add = stringRedisTemplate.opsForSet().add(ConstantValue.remainder_shortcode, codes.toArray(new String[codes.size()]));
+        return add!=null?true:false;
     }
 }

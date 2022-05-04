@@ -7,12 +7,12 @@ spring:
     database: 0
     host: 127.0.0.1
     port: 6379
-    #password: tiantang
+    #password:
   data:
     mongodb:
       host: 127.0.0.1
       port: 27017
-      database:
+      database: short-url-db
 mybatis-plus:
   configuration:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
