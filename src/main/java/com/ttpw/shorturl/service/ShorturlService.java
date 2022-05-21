@@ -42,7 +42,7 @@ public class ShorturlService {
     @Log
     public String buildShortUrl(String url){
         if(!StringUtils.hasText(url)||url.length()>500){
-          throw new RuntimeException("url长度不对!");
+          throw new JsonException(Status.BODY_NOT_MATCH.getCode(),"url长度不对!");
         }
         return ConstantValue.short_url_prefix+fetchShortCode(url);
     }
@@ -58,10 +58,10 @@ public class ShorturlService {
          url+=ConstantValue.HTTP+"://";
         }
         if(!testURL(url)  ){
-          throw new RuntimeException(url+",不符合URL规范!");
+          throw new JsonException(Status.BODY_NOT_MATCH.getCode(),url+",不符合URL规范!");
         }
         if(!accessUrl(url)  ){
-            throw new RuntimeException(url+",访问异常,请确保该链接可以被访问到!");
+            throw new JsonException(Status.BODY_NOT_MATCH.getCode(),url+",访问异常,请确保该链接可以被访问到!");
         }
         String md5Key = MD5.create().digestHex(url);
 
@@ -141,11 +141,11 @@ public class ShorturlService {
     public String changeShortCode(String code){
         String errorMsg=code+",不合法!";
         if(code.length()!=6  ){
-          throw new RuntimeException(errorMsg);
+          throw new JsonException(Status.BODY_NOT_MATCH.getCode(),errorMsg);
         }
         String urlFromRedis = shortCodeService.getUrlFromRedis(code);
         if(ConstantValue.none.equals(urlFromRedis)  ){
-            throw new RuntimeException(errorMsg);
+            throw new JsonException(Status.BODY_NOT_MATCH.getCode(),errorMsg);
         }
 
         if(urlFromRedis!=null&&urlFromRedis.startsWith(ConstantValue.HTTP)  ){
@@ -159,10 +159,10 @@ public class ShorturlService {
                 return urlFromMongo;
             }else{
                 shortCodeService.cachedShortCode(code,ConstantValue.none);
-                throw new RuntimeException(errorMsg);
+                throw new JsonException(Status.BODY_NOT_MATCH.getCode(),errorMsg);
             }
         }
-        throw new RuntimeException(errorMsg);
+        throw new JsonException(Status.BODY_NOT_MATCH.getCode(),errorMsg);
     }
 
 }
