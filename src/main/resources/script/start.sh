@@ -1,8 +1,8 @@
 #!/bin/sh
 set -xe
 
-SRV_NAME="dqs-service"
-PRJ_VER="1.0.0-SNAPSHOT"
+SRV_NAME="short-url"
+PRJ_VER="0.0.1-SNAPSHOT"
 LOG_HOME="./logs"
 
 # JAVA VAR

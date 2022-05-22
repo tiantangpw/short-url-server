@@ -3,7 +3,6 @@ package com.ttpw.shorturl.exception;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.ModelAndView;
 
@@ -26,10 +25,9 @@ public class DemoExceptionHandler {
 	 * @return 统一返回 json 格式
 	 */
 	@ExceptionHandler(value = JsonException.class)
-	@ResponseBody
-	public ApiResponse jsonErrorHandler(HttpServletRequest req, HandlerMethod method, JsonException exception) {
+	public ModelAndView jsonErrorHandler(HttpServletRequest req, HandlerMethod method, JsonException exception) {
         log.error(String.format("访问 %s -> %s 出现业务异常！", req.getRequestURI(), method.toString()), exception);
-        return ApiResponse.ofException(exception);
+        return buildView(exception.getCode().toString(),exception.getMessage());
 	}
 
 	/**
@@ -41,11 +39,8 @@ public class DemoExceptionHandler {
 	@ExceptionHandler(value = PageException.class)
 	public ModelAndView pageErrorHandler(PageException exception) {
 		log.error("【DemoPageException】:{}", exception.getMessage());
-		ModelAndView view = new ModelAndView();
-		view.addObject("code", exception.getCode());
-		view.addObject("message", exception.getMessage());
-		view.setViewName(DEFAULT_ERROR_VIEW);//跳转到error.html
-		return view;
+
+		return buildView(exception.getCode().toString(),exception.getMessage());
 	}
 
     /**
@@ -54,11 +49,10 @@ public class DemoExceptionHandler {
      * @return
      */
     @ExceptionHandler(value =NullPointerException.class)
-    @ResponseBody
-    public ApiResponse exceptionHandler(NullPointerException e){
+    public ModelAndView exceptionHandler(NullPointerException e){
         String err="发生空指针异常！";
         log.error(err,e);
-        return ApiResponse.of(Status.UNKNOWN_ERROR.getCode(),err,null);
+        return buildView(Status.UNKNOWN_ERROR.getCode().toString(),err);
     }
 
     /**
@@ -69,10 +63,18 @@ public class DemoExceptionHandler {
      * @return
      */
     @ExceptionHandler(value = Exception.class)
-    public ApiResponse exceptionHandler(HttpServletRequest req, HandlerMethod method, Exception ex) {
+    public ModelAndView exceptionHandler(HttpServletRequest req, HandlerMethod method, Exception ex) {
         //输出一下请求参数
         log.info("请求参数：" + req.getQueryString());
         log.error(String.format("访问 %s -> %s 出现系统异常！", req.getRequestURI(), method.toString()), ex);
-        return ApiResponse.of(Status.UNKNOWN_ERROR.getCode(), "服务器繁忙", null);
+        return buildView(Status.UNKNOWN_ERROR.getCode().toString(), "出现系统异常！");
+    }
+
+    private static ModelAndView buildView(String code,String msg){
+        ModelAndView view = new ModelAndView();
+        view.addObject("code", code);
+        view.addObject("message", msg);
+        view.setViewName(DEFAULT_ERROR_VIEW);//跳转到error.html
+        return view;
     }
 }

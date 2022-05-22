@@ -67,7 +67,7 @@ public class ShorturlService {
 
         Shorturl shortUrl = shortCodeService.existMd5Key(md5Key);
         if(Objects.nonNull(shortUrl)){
-          return shortUrl.getShortCode();
+          return shortUrl.getShortCode().replace(ConstantValue.redis_shortcode_prefix,"");
         }
 
         for (int i = 0; i < 5; i++) {//短码有重复使用的可能,尝试5次
