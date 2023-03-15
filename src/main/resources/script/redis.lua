@@ -26,7 +26,7 @@ temp1 = 0
 temp1  =  red:exists(request_uri)
 
 local url="http://www.u8.work/404.html"
-if  temp1 == 0  then
+if  temp1 == 0  then --短码过期后,需要再从MongoDB中查一次
     close_redis(red)
     ngx.redirect(url);
 else
